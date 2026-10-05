@@ -35,12 +35,10 @@
 <div id="root"></div><div id="toast" class="toast"></div>
 <script>
 setTimeout(()=>document.getElementById("splash")?.classList.add("hide"),1800);
-// Clear an old broken uploaded-logo override once; the bundled school logo is the default.
-if(localStorage.getItem("ta-logo-migration-v3")!=="1"){stateLogoMigrationPending=true;localStorage.setItem("ta-logo-migration-v3","1")}
 const KEY="teacher-assistant-local-v1";
 const DEF={school:"Guru Vasishta Vidhyan",className:"10D",theme:"royal",logo:"",classes:{"10D":["Aarav Kumar","Ananya Singh","Rahul Kumar","Priya Kumari","Rohit Singh"],"10A":["Aarav Kumar","Ananya Singh","Rahul Kumar","Priya Kumari","Rohit Singh"],"10B":["Aman Raj","Neha Kumari","Vikas Kumar","Simran Singh"],"9A":["Aditya Kumar","Riya Singh","Kunal Raj","Pooja Kumari"]},attendanceRecords:[],noticeHistory:[]};
-let state=Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)||"{}"));if(stateLogoMigrationPending)state.logo="";state.classes=Object.assign({},DEF.classes,state.classes||{});state.attendanceRecords=state.attendanceRecords||[];state.noticeHistory=state.noticeHistory||[];
-let tab="attendance",absent=new Set(),stateLogoMigrationPending=false;
+let state=Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)||"{}"));if(localStorage.getItem("ta-logo-migration-v3")!=="1"){state.logo="";localStorage.setItem("ta-logo-migration-v3","1")}state.classes=Object.assign({},DEF.classes,state.classes||{});state.attendanceRecords=state.attendanceRecords||[];state.noticeHistory=state.noticeHistory||[];
+let tab="attendance",absent=new Set();
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
 const dateKey=()=>{let d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
