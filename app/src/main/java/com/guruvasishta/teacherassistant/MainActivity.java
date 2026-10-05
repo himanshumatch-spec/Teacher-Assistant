@@ -40,32 +40,49 @@ public class MainActivity extends AppCompatActivity {
         public void shareImage(String dataUrl, String fileName) {
             runOnUiThread(() -> {
                 try {
-                    String base64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
+                    int comma = dataUrl.indexOf(",");
+                    if (comma < 0) throw new Exception("Invalid image data");
+                    String base64 = dataUrl.substring(comma + 1);
                     byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
-                    File baseDir = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
-                    File dir = new File(baseDir, "shared");
+
+                    // Always use the app's internal cache. This is reliably covered by
+                    // FileProvider and avoids OEM/Android-version differences with
+                    // external-cache URI grants.
+                    File dir = new File(getCacheDir(), "shared");
                     if (!dir.exists() && !dir.mkdirs()) throw new Exception("Cannot create share folder");
-                    File file = new File(dir, fileName);
+
+                    String safeName = (fileName == null || fileName.trim().isEmpty())
+                            ? "school-notice.png" : fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+                    if (!safeName.toLowerCase().endsWith(".png")) safeName += ".png";
+
+                    File file = new File(dir, safeName);
                     try (FileOutputStream out = new FileOutputStream(file)) {
                         out.write(bytes);
                         out.flush();
                     }
+
                     Uri uri = androidx.core.content.FileProvider.getUriForFile(
                             MainActivity.this,
                             getPackageName() + ".fileprovider",
                             file
                     );
+
                     Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("image/*");
+                    share.setType("image/png");
                     share.putExtra(Intent.EXTRA_STREAM, uri);
-                    share.putExtra(Intent.EXTRA_TEXT, "School Notice");
                     share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    share.setClipData(ClipData.newRawUri("School Notice", uri));
+                    share.setClipData(ClipData.newUri(getContentResolver(), "School Notice", uri));
+
                     Intent chooser = Intent.createChooser(share, "Share Notice Image");
                     chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     startActivity(chooser);
                 } catch (Exception e) {
-                    android.widget.Toast.makeText(MainActivity.this, "Could not share notice image", android.widget.Toast.LENGTH_SHORT).show();
+                    e.printStackTrace();
+                    android.widget.Toast.makeText(
+                            MainActivity.this,
+                            "Could not share notice image",
+                            android.widget.Toast.LENGTH_LONG
+                    ).show();
                 }
             });
         }
