@@ -27,4 +27,4 @@ The workflow in `.github/workflows/android.yml` builds a debug APK on every push
 - KEY_ALIAS
 - KEY_PASSWORD
 
-The Android wrapper keeps the existing Hatchable backend, cloud data, PWA UI, attendance register, notices, and settings intact.
+The Android wrapper keeps the existing standalone UI, attendance register, notices, PNG save, and settings intact.
