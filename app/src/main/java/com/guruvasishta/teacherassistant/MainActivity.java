@@ -274,6 +274,15 @@ public class MainActivity extends AppCompatActivity {
         s.setSupportZoom(false);
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
+        // Keep the local APK page isolated from arbitrary file/HTTP content.
+        s.setAllowFileAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            s.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            WebView.setWebContentsDebuggingEnabled(false);
+        }
         s.setUserAgentString(s.getUserAgentString() + " TeacherAssistantAndroid/3.0");
 
         CookieManager.getInstance().setAcceptCookie(true);
@@ -293,6 +302,11 @@ public class MainActivity extends AppCompatActivity {
         webView.addJavascriptInterface(new AndroidAI(), "AndroidAI");
 
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onConsoleMessage(android.webkit.ConsoleMessage message) {
+                // Keep JavaScript console warnings/errors out of the user-facing app.
+                return true;
+            }
+
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
                 if (fileCallback != null) fileCallback.onReceiveValue(null);
                 fileCallback = callback;
