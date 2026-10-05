@@ -57,11 +57,51 @@ async function share(){saveAttendance();let t=reportText();if(navigator.share){t
 function copyText(t){try{navigator.clipboard.writeText(t);toast("Copied. Paste in WhatsApp.")}catch(e){toast("Copy unavailable")}}
 function copyReport(){saveAttendance();copyText(reportText())}
 function register(){let c=state.className,s=state.classes[c]||[],mk=(new Date()).toISOString().slice(0,7),r=state.attendanceRecords.filter(x=>x.class===c&&x.date.startsWith(mk)).sort((a,b)=>a.date.localeCompare(b.date)),abs={};s.forEach((_,i)=>abs[i+1]=0);r.forEach(x=>(x.absent||[]).forEach(a=>abs[a.roll]++));let rows=s.map((n,i)=>{let ab=abs[i+1]||0,pr=Math.max(0,r.length-ab),pc=r.length?Math.round(pr/r.length*100):0;return "<tr><td>"+(i+1)+"</td><td><b>"+esc(n)+"</b></td><td>"+pr+"</td><td>"+ab+"</td><td>"+pc+"%</td></tr>"}).join("");let daily=r.map(x=>"<div class='day'><b>"+esc(x.displayDate||x.date)+"</b><small>"+x.present+" Present • "+x.absent.length+" Absent</small><div class='abs'>"+(x.absent.length?x.absent.map(a=>a.roll+". "+esc(a.name)).join(", "):"All students present")+"</div></div>").join("");document.getElementById("content").innerHTML='<div class="hero"><div><span class="eyebrow">ATTENDANCE REGISTER</span><h2>Monthly Register</h2><p>'+esc(c)+' • '+new Date().toLocaleDateString("en-IN",{month:"long",year:"numeric"})+'</p></div><div class="heroIcon">▦</div></div><div class="stats"><div class="stat total"><span>Attendance Days</span><b>'+r.length+'</b></div><div class="stat present"><span>Total Present</span><b>'+r.reduce((n,x)=>n+x.present,0)+'</b></div><div class="stat absent"><span>Total Absent</span><b>'+r.reduce((n,x)=>n+x.absent.length,0)+'</b></div></div><div class="card"><b>Student Register</b><div class="register"><table><thead><tr><th>Roll</th><th>Student</th><th>Present</th><th>Absent</th><th>%</th></tr></thead><tbody>'+rows+'</tbody></table></div></div><div class="card"><b>Daily Attendance</b>'+(daily||'<div class="empty">No attendance saved yet. Mark today’s attendance and tap Save Attendance.</div>')+'</div>'}
-function notice(){document.getElementById("content").innerHTML='<div class="noticeHero"><span class="eyebrow">SCHOOL COMMUNICATION</span><h2>Professional Notice Generator</h2><p>Create a bilingual English + Hindi notice.</p></div><div class="card"><div class="label">TOPIC / INSTRUCTIONS</div><textarea id="topic" class="field" rows="4" placeholder="Example: Holiday tomorrow due to local festival"></textarea><div class="noticeOptions"><select id="type" class="field"><option>General Notice</option><option>Holiday Notice</option><option>Parent Meeting</option><option>Exam / Test</option><option>Important Reminder</option></select><button class="btn blue" onclick="genNotice()">Generate Notice</button></div></div><div id="noticeCard" class="card" style="display:none"><div class="notice" id="noticeView"></div><div class="actions"><button class="btn green" onclick="shareNotice()">Share</button><button class="btn secondary" onclick="copyNotice()">Copy</button></div></div>'}
+function notice(){document.getElementById("content").innerHTML='<div class="noticeHero"><span class="eyebrow">SCHOOL COMMUNICATION</span><h2>Professional Notice Generator</h2><p>Create a bilingual English + Hindi notice.</p></div><div class="card"><div class="label">TOPIC / INSTRUCTIONS</div><textarea id="topic" class="field" rows="4" placeholder="Example: Holiday tomorrow due to local festival"></textarea><div class="noticeOptions"><select id="type" class="field"><option>General Notice</option><option>Holiday Notice</option><option>Parent Meeting</option><option>Exam / Test</option><option>Important Reminder</option></select><button class="btn blue" onclick="genNotice()">Generate Notice</button></div></div><div id="noticeCard" class="card" style="display:none"><div class="notice" id="noticeView"></div><div class="actions"><button class="btn blue" onclick="shareNoticeImage()">🖼️ Share as Image</button><button class="btn green" onclick="shareNotice()">Share Text</button><button class="btn secondary" onclick="copyNotice()">Copy</button></div></div>'}
 function genNotice(){let t=document.getElementById("topic").value.trim();if(!t)return toast("Enter a topic first");let type=document.getElementById("type").value,d=dateText(),en="This is to inform all students and parents that "+t+". Kindly take note of this information and make the necessary arrangements.",hi="सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि "+t+"। कृपया इस सूचना का ध्यान रखें और आवश्यक व्यवस्था करें।";state.noticeHistory.unshift({date:d,type,topic:t,english:en,hindi:hi});save();document.getElementById("noticeView").innerHTML=logo()+'<h2>'+esc(state.school)+'</h2><div class="rule"></div><b>NOTICE</b><div class="muted">Date: '+d+'</div><p><b>'+esc(type)+'</b></p><div class="body"><p><b>Dear Parents/Students,</b></p><p>'+esc(en)+'</p><hr><p class="hindi"><b>प्रिय अभिभावकों/विद्यार्थियों,</b></p><p class="hindi">'+esc(hi)+'</p></div><p style="text-align:right">Regards,<br><b>'+esc(state.school)+'</b></p>';document.getElementById("noticeCard").style.display="block"}
 function noticeText(){let n=state.noticeHistory[0];return n?"🏫 "+state.school+"\n\nNOTICE\nDate: "+n.date+"\n"+n.type+"\n\nDear Parents/Students,\n"+n.english+"\n\nप्रिय अभिभावकों/विद्यार्थियों,\n"+n.hindi+"\n\nRegards,\n"+state.school:""}
 async function shareNotice(){let t=noticeText();if(navigator.share){try{await navigator.share({title:"School Notice",text:t})}catch(e){}}else copyText(t)}
 function copyNotice(){copyText(noticeText())}
+function noticeImageCanvas(){
+  let n=state.noticeHistory[0]; if(!n) return null;
+  let cv=document.createElement("canvas"),W=1080,H=1450,ctx=cv.getContext("2d");
+  cv.width=W;cv.height=H;
+  let g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,"#f8fbff");g.addColorStop(1,"#eef3ff");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="#152b7a";ctx.fillRect(0,0,W,22);
+  ctx.fillStyle="#ffffff";ctx.fillRect(55,55,W-110,H-110);
+  ctx.strokeStyle="#dbe3f2";ctx.lineWidth=2;ctx.strokeRect(55,55,W-110,H-110);
+  ctx.textAlign="center";
+  ctx.fillStyle="#152b7a";ctx.font="700 42px system-ui";ctx.fillText(state.school,W/2,150);
+  ctx.fillStyle="#315bea";ctx.font="800 34px system-ui";ctx.fillText("NOTICE",W/2,225);
+  ctx.strokeStyle="#315bea";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(190,255);ctx.lineTo(W-190,255);ctx.stroke();
+  ctx.fillStyle="#687386";ctx.font="500 24px system-ui";ctx.fillText("Date: "+n.date,W/2,305);
+  ctx.fillStyle="#182033";ctx.font="800 30px system-ui";ctx.fillText(n.type,W/2,365);
+  let y=440;
+  ctx.textAlign="left";ctx.fillStyle="#182033";ctx.font="700 27px system-ui";ctx.fillText("Dear Parents/Students,",110,y);y+=58;
+  y=wrapCanvas(ctx,n.english,110,y,W-220,29,1.65);y+=45;
+  ctx.strokeStyle="#e1e6ef";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(110,y);ctx.lineTo(W-110,y);ctx.stroke();y+=50;
+  ctx.font="700 27px 'Noto Sans Devanagari',system-ui";ctx.fillText("प्रिय अभिभावकों/विद्यार्थियों,",110,y);y+=58;
+  y=wrapCanvas(ctx,n.hindi,110,y,W-220,28,1.7);y+=70;
+  ctx.textAlign="right";ctx.fillStyle="#182033";ctx.font="500 25px system-ui";ctx.fillText("Regards,",W-120,y);y+=36;ctx.font="800 27px system-ui";ctx.fillText(state.school,W-120,y);
+  return cv;
+}
+function wrapCanvas(ctx,text,x,y,maxWidth,fontSize,lineHeight){
+  ctx.font=(ctx.font.includes("Noto")?"700 ":"500 ")+fontSize+"px "+(ctx.font.includes("Noto")?"'Noto Sans Devanagari',system-ui":"system-ui");
+  let words=String(text).split(/\\s+/),line="";
+  for(let w of words){let test=line?line+" "+w:w;if(ctx.measureText(test).width>maxWidth&&line){ctx.fillText(line,x,y);y+=fontSize*lineHeight;line=w}else line=test}
+  if(line){ctx.fillText(line,x,y);y+=fontSize*lineHeight}
+  return y;
+}
+async function shareNoticeImage(){
+  let cv=noticeImageCanvas();if(!cv)return toast("Generate a notice first");
+  let data=cv.toDataURL("image/png");
+  if(window.AndroidShare&&AndroidShare.shareImage){AndroidShare.shareImage(data,"school-notice.png");return}
+  try{
+    let blob=await (await fetch(data)).blob(),file=new File([blob],"school-notice.png",{type:"image/png"});
+    if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({title:"School Notice",files:[file]});return}
+    let a=document.createElement("a");a.href=data;a.download="school-notice.png";a.click();toast("Notice image saved");
+  }catch(e){toast("Image sharing unavailable")}
+}
 function settings(){document.getElementById("content").innerHTML='<div class="settingsHero">'+logo()+'<div><span class="eyebrow">SCHOOL PROFILE</span><h2>Settings</h2><p>School name and your class.</p></div></div><div class="card"><div class="label">SCHOOL NAME</div><input id="school" class="field" value="'+esc(state.school)+'"><div class="label">MY CLASS</div><input id="className" class="field" value="'+esc(state.className)+'" placeholder="Example: 10D"><div class="label">SCHOOL LOGO</div><input id="logoInput" type="file" accept="image/*" class="field"><button class="btn blue full" onclick="saveSettings()">Save School Profile</button></div><div class="card"><b>Data</b><p class="muted">This standalone APK stores your attendance and notices on this phone.</p><button class="btn secondary" onclick="resetData()">Reset data</button></div>'}
 function saveSettings(){state.school=document.getElementById("school").value.trim()||DEF.school;let c=document.getElementById("className").value.trim().toUpperCase()||"10D";if(!state.classes[c])state.classes[c]=[];state.className=c;let f=document.getElementById("logoInput").files[0];if(f){let rd=new FileReader();rd.onload=()=>{state.logo=rd.result;save();absent.clear();shell();toast("Settings saved")};rd.readAsDataURL(f)}else{save();absent.clear();shell();toast("Settings saved")}}
 function resetData(){if(confirm("Reset all app data?")){localStorage.removeItem(KEY);location.reload()}}
