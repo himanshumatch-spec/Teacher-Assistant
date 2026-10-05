@@ -2,8 +2,15 @@ package com.guruvasishta.teacherassistant;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Intent;
+import android.content.Context;
+import android.content.ClipData;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.net.Uri;
+import android.util.Base64;
+import android.webkit.JavascriptInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
@@ -12,11 +19,46 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebResourceRequest;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
     private static final String APP_URL = "file:///android_asset/index.html";
+
+    public class AndroidShare {
+        @JavascriptInterface
+        public void shareImage(String dataUrl, String fileName) {
+            runOnUiThread(() -> {
+                try {
+                    String base64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
+                    byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
+                    File dir = new File(getCacheDir(), "shared");
+                    if (!dir.exists()) dir.mkdirs();
+                    File file = new File(dir, fileName);
+                    try (FileOutputStream out = new FileOutputStream(file)) {
+                        out.write(bytes);
+                    }
+                    Uri uri = androidx.core.content.FileProvider.getUriForFile(
+                            MainActivity.this,
+                            getPackageName() + ".fileprovider",
+                            file
+                    );
+                    Intent share = new Intent(Intent.ACTION_SEND);
+                    share.setType("image/png");
+                    share.putExtra(Intent.EXTRA_STREAM, uri);
+                    share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    share.setClipData(ClipData.newRawUri("School Notice", uri));
+                    startActivity(Intent.createChooser(share, "Share Notice Image"));
+                } catch (Exception e) {
+                    android.widget.Toast.makeText(MainActivity.this, "Could not share notice image", android.widget.Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+    }
     private static final int FILE_CHOOSER_REQUEST = 1001;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -51,6 +93,8 @@ public class MainActivity extends AppCompatActivity {
                 return true;
             }
         });
+
+        webView.addJavascriptInterface(new AndroidShare(), "AndroidShare");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
