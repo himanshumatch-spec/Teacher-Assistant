@@ -62,16 +62,19 @@ function genNotice(){let t=document.getElementById("topic").value.trim();if(!t)r
 function noticeText(){let n=state.noticeHistory[0];return n?"🏫 "+state.school+"\n\nNOTICE\nDate: "+n.date+"\n"+n.type+"\n\nDear Parents/Students,\n"+n.english+"\n\nप्रिय अभिभावकों/विद्यार्थियों,\n"+n.hindi+"\n\nRegards,\n"+state.school:""}
 async function shareNotice(){let t=noticeText();if(navigator.share){try{await navigator.share({title:"School Notice",text:t})}catch(e){}}else copyText(t)}
 function copyNotice(){copyText(noticeText())}
-function noticeImageCanvas(){
+async function noticeImageCanvas(){
   let n=state.noticeHistory[0]; if(!n) return null;
   let cv=document.createElement("canvas"),W=1080,H=1450,ctx=cv.getContext("2d");
+  let logoImg=null, logoSrc=document.querySelector("#noticeView .logo")?.src;
+  if(logoSrc){logoImg=new Image();try{await new Promise((resolve,reject)=>{logoImg.onload=resolve;logoImg.onerror=reject;logoImg.src=logoSrc})}catch(e){logoImg=null}}
   cv.width=W;cv.height=H;
   let g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,"#f8fbff");g.addColorStop(1,"#eef3ff");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   ctx.fillStyle="#152b7a";ctx.fillRect(0,0,W,22);
   ctx.fillStyle="#ffffff";ctx.fillRect(55,55,W-110,H-110);
   ctx.strokeStyle="#dbe3f2";ctx.lineWidth=2;ctx.strokeRect(55,55,W-110,H-110);
   ctx.textAlign="center";
-  ctx.fillStyle="#152b7a";ctx.font="700 42px system-ui";ctx.fillText(state.school,W/2,150);
+  if(logoImg){ctx.save();ctx.beginPath();ctx.arc(W/2,105,48,0,Math.PI*2);ctx.clip();ctx.drawImage(logoImg,W/2-48,57,96,96);ctx.restore()}
+  ctx.fillStyle="#152b7a";ctx.font="700 42px system-ui";ctx.fillText(state.school,W/2,190);
   ctx.fillStyle="#315bea";ctx.font="800 34px system-ui";ctx.fillText("NOTICE",W/2,225);
   ctx.strokeStyle="#315bea";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(190,255);ctx.lineTo(W-190,255);ctx.stroke();
   ctx.fillStyle="#687386";ctx.font="500 24px system-ui";ctx.fillText("Date: "+n.date,W/2,305);
@@ -93,7 +96,7 @@ function wrapCanvas(ctx,text,x,y,maxWidth,fontSize,lineHeight){
   return y;
 }
 async function shareNoticeImage(){
-  let cv=noticeImageCanvas();if(!cv)return toast("Generate a notice first");
+  let cv=await noticeImageCanvas();if(!cv)return toast("Generate a notice first");
   let data=cv.toDataURL("image/png");
   if(window.AndroidShare&&AndroidShare.shareImage){AndroidShare.shareImage(data,"school-notice.png");return}
   try{
