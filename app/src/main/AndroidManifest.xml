@@ -8,6 +8,15 @@
         android:roundIcon="@drawable/ic_teacher_assistant"
         android:supportsRtl="true"
         android:theme="@style/Theme.TeacherAssistant">
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.guruvasishta.teacherassistant.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
         <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
