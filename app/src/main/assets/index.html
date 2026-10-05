@@ -132,7 +132,7 @@ function wrapCanvas(ctx,text,x,y,maxWidth,fontSize,lineHeight){
 async function saveNoticeImage(){
   let cv=await noticeImageCanvas();if(!cv)return toast("Generate a notice first");
   let data=cv.toDataURL("image/png");
-  if(window.AndroidShare&&AndroidShare.saveImage){AndroidShare.saveImage(data,"school-notice.png");return}
+  if(window.AndroidSaveImage&&AndroidSaveImage.saveImage){AndroidSaveImage.saveImage(data,"school-notice.png");return}
   try{
     let a=document.createElement("a");a.href=data;a.download="school-notice.png";a.click();toast("Notice PNG saved");
   }catch(e){toast("Image save unavailable")}
