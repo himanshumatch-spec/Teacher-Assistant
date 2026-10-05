@@ -12,7 +12,7 @@
 #splash{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:linear-gradient(145deg,#102568,#315bea);color:#fff;transition:opacity .45s ease,visibility .45s ease}
 #splash.hide{opacity:0;visibility:hidden;pointer-events:none}
 .splash-inner{text-align:center;padding:28px;animation:splashUp .8s cubic-bezier(.2,.8,.2,1) both}
-.splash-logo{width:92px;height:92px;border-radius:50%;background:#fff;display:grid;place-items:center;margin:0 auto 18px;box-shadow:0 12px 38px #08163866;font-size:48px;animation:splashLogo 1s ease both}
+.splash-logo{width:104px;height:104px;border-radius:50%;background:#fff;display:block;object-fit:cover;padding:5px;margin:0 auto 18px;box-shadow:0 12px 38px #08163866;animation:splashLogo 1s ease both}
 .splash-title{font-size:25px;font-weight:800;letter-spacing:-.4px;animation:splashText .7s .15s ease both}
 .splash-sub{margin-top:5px;font-size:14px;opacity:.82;animation:splashText .7s .25s ease both}
 .splash-brand{margin-top:42px;font-size:10px;letter-spacing:.7px;opacity:.7;animation:splashText .7s .4s ease both}
@@ -26,7 +26,7 @@
 <body>
 <div id="splash" aria-label="Teacher Assistant">
   <div class="splash-inner">
-    <div class="splash-logo">🏫</div>
+    <img class="splash-logo" src="school-logo.jpg" alt="Guru Vasishta Vidhyan">
     <div class="splash-title">Guru Vasishta Vidhyan</div>
     <div class="splash-sub">Teacher Assistant</div>
     <div class="splash-brand">Powered by <b>Hexa Media</b></div>
@@ -43,7 +43,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
 const dateKey=()=>{let d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const dateText=()=>new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
-const logo=()=>state.logo?'<img class="logo" src="'+state.logo+'">':'<div class="logo" style="display:grid;place-items:center;font-size:25px">🏫</div>';
+const logo=()=>state.logo?'<img class="logo" src="'+state.logo+'">':'<img class="logo" src="school-logo.jpg" alt="School logo">';
 function toast(t){let x=document.getElementById("toast");x.textContent=t;x.style.display="block";setTimeout(()=>x.style.display="none",1800)}
 function shell(){document.getElementById("root").innerHTML='<div class="app"><header class="top"><div class="brand">'+logo()+'<div><h1>'+esc(state.school)+'</h1><p>Class Teacher: MUKESH KUMAR CHAUHAN</p></div></div><div class="tabs">'+["attendance","register","notice","settings"].map((x,i)=>'<button class="tab '+(tab===x?"active":"")+'" onclick="go(\''+x+'\')">'+["Attendance","Register","Notice","Settings"][i]+"</button>").join("")+'</div></header><main class="content" id="content"></main></div>';render()}
 function go(x){tab=x;shell()}
