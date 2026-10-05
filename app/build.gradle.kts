@@ -2,7 +2,7 @@ plugins { id("com.android.application") }
 
 android {
     namespace = "com.guruvasishta.teacherassistant"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.guruvasishta.teacherassistant"
