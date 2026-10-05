@@ -16,7 +16,7 @@ const KEY="teacher-assistant-local-v1";
 const DEF={school:"Guru Vasishta Vidhyan",className:"10D",theme:"royal",logo:"",classes:{"10D":["Aarav Kumar","Ananya Singh","Rahul Kumar","Priya Kumari","Rohit Singh"],"10A":["Aarav Kumar","Ananya Singh","Rahul Kumar","Priya Kumari","Rohit Singh"],"10B":["Aman Raj","Neha Kumari","Vikas Kumar","Simran Singh"],"9A":["Aditya Kumar","Riya Singh","Kunal Raj","Pooja Kumari"]},attendanceRecords:[],noticeHistory:[]};
 let state=Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)||"{}"));state.classes=Object.assign({},DEF.classes,state.classes||{});state.attendanceRecords=state.attendanceRecords||[];state.noticeHistory=state.noticeHistory||[];
 let tab="attendance",absent=new Set();
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",""":"&quot;","'":"&#39;"}[c]));
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const save=()=>localStorage.setItem(KEY,JSON.stringify(state));
 const dateKey=()=>{let d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 const dateText=()=>new Date().toLocaleDateString("en-IN",{day:"2-digit",month:"short",year:"numeric"});
