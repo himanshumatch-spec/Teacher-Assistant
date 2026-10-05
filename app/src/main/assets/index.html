@@ -58,7 +58,40 @@ function copyText(t){try{navigator.clipboard.writeText(t);toast("Copied. Paste i
 function copyReport(){saveAttendance();copyText(reportText())}
 function register(){let c=state.className,s=state.classes[c]||[],mk=(new Date()).toISOString().slice(0,7),r=state.attendanceRecords.filter(x=>x.class===c&&x.date.startsWith(mk)).sort((a,b)=>a.date.localeCompare(b.date)),abs={};s.forEach((_,i)=>abs[i+1]=0);r.forEach(x=>(x.absent||[]).forEach(a=>abs[a.roll]++));let rows=s.map((n,i)=>{let ab=abs[i+1]||0,pr=Math.max(0,r.length-ab),pc=r.length?Math.round(pr/r.length*100):0;return "<tr><td>"+(i+1)+"</td><td><b>"+esc(n)+"</b></td><td>"+pr+"</td><td>"+ab+"</td><td>"+pc+"%</td></tr>"}).join("");let daily=r.map(x=>"<div class='day'><b>"+esc(x.displayDate||x.date)+"</b><small>"+x.present+" Present • "+x.absent.length+" Absent</small><div class='abs'>"+(x.absent.length?x.absent.map(a=>a.roll+". "+esc(a.name)).join(", "):"All students present")+"</div></div>").join("");document.getElementById("content").innerHTML='<div class="hero"><div><span class="eyebrow">ATTENDANCE REGISTER</span><h2>Monthly Register</h2><p>'+esc(c)+' • '+new Date().toLocaleDateString("en-IN",{month:"long",year:"numeric"})+'</p></div><div class="heroIcon">▦</div></div><div class="stats"><div class="stat total"><span>Attendance Days</span><b>'+r.length+'</b></div><div class="stat present"><span>Total Present</span><b>'+r.reduce((n,x)=>n+x.present,0)+'</b></div><div class="stat absent"><span>Total Absent</span><b>'+r.reduce((n,x)=>n+x.absent.length,0)+'</b></div></div><div class="card"><b>Student Register</b><div class="register"><table><thead><tr><th>Roll</th><th>Student</th><th>Present</th><th>Absent</th><th>%</th></tr></thead><tbody>'+rows+'</tbody></table></div></div><div class="card"><b>Daily Attendance</b>'+(daily||'<div class="empty">No attendance saved yet. Mark today’s attendance and tap Save Attendance.</div>')+'</div>'}
 function notice(){document.getElementById("content").innerHTML='<div class="noticeHero"><span class="eyebrow">SCHOOL COMMUNICATION</span><h2>Notice Generator</h2><p>AI से औपचारिक एवं द्विभाषी विद्यालय सूचना तैयार करें।</p></div><div class="card"><div class="label">सूचना / निर्देश</div><textarea id="topic" class="field" rows="4" placeholder="उदाहरण: कल local festival की वजह से school बंद रहेगा, सभी students घर पर रहें।"></textarea><div class="noticeOptions"><select id="type" class="field"><option>General Notice</option><option>Holiday Notice</option><option>Parent Meeting</option><option>Exam / Test</option><option>Important Reminder</option></select><button class="btn blue" onclick="genNotice()">✨ AI Generate Notice</button></div><div class="muted">हिंदी, English या Hinglish में लिखें। AI इसे औपचारिक English और Hindi notice में बदल देगा।</div></div><div id="noticeCard" class="card" style="display:none"><div class="notice" id="noticeView"></div><div class="actions"><button class="btn blue" onclick="shareNoticeImage()">🖼️ Share as Image</button><button class="btn green" onclick="shareNotice()">Share Text</button><button class="btn secondary" onclick="copyNotice()">Copy</button></div></div>'}
-async function genNotice(){let t=document.getElementById("topic").value.trim(),type=document.getElementById("type").value;if(!t)return toast("सूचना लिखें");toast("AI notice तैयार हो रहा है...");try{if(window.AndroidAI&&AndroidAI.rewriteNotice){AndroidAI.rewriteNotice(t,type,state.school);return}let r=await fetch("https://school-teacher-gfsg.hatchable.site/api/notice-ai",{method:"POST",headers:{"Content-Type":"application/json","x-teacher-assistant-app":"teacher-assistant-v1"},body:JSON.stringify({text:t,type,school:state.school})});let j=await r.json();if(!r.ok)throw new Error(j.error||"AI service unavailable");window.onNativeAiNotice("OK","ENGLISH:\n"+j.english+"\nHINDI:\n"+j.hindi)}catch(e){toast(e.message||"AI notice failed")}}
+function freeNoticeRewrite(t,type){
+  let s=t.trim().replace(/[.!?]+$/,""),en=s,hi=s;
+  const pairs=[
+    [/\\bkal\\b|\\btomorrow\\b/gi,"tomorrow","कल"],
+    [/\\baaj\\b|\\btoday\\b/gi,"today","आज"],
+    [/\\bschool\\s*band\\b|\\bholiday\\b|\\bchhutti\\b|\\bavkash\\b/gi,"the school will remain closed","विद्यालय बंद रहेगा"],
+    [/\\bschool\\s*khulega\\b|\\bopen\\b/gi,"the school will remain open","विद्यालय खुला रहेगा"],
+    [/\\b12\\s*baje\\b|\\b12\\s*pm\\b/gi,"12:00 PM","दोपहर 12:00 बजे"],
+    [/\\b1\\s*baje\\b|\\b1\\s*pm\\b/gi,"1:00 PM","दोपहर 1:00 बजे"],
+    [/\\b2\\s*baje\\b|\\b2\\s*pm\\b/gi,"2:00 PM","दोपहर 2:00 बजे"],
+    [/\\bparents?\\b/gi,"parents","अभिभावक"],
+    [/\\bbaccho?n?\\b|\\bchildren\\b|\\bstudents?\\b/gi,"children/students","बच्चों/विद्यार्थियों"],
+    [/\\btime pe\\b|\\btime par\\b|\\bon time\\b/gi,"on time","समय पर"],
+    [/\\blene aaye\\b|\\bpick\\s*up\\b/gi,"come to pick up their children","अपने बच्चों को लेने आएँ"],
+    [/\\bannual function\\b/gi,"annual function","वार्षिक समारोह"],
+    [/\\bexam\\b|\\btest\\b/gi,"examination/test","परीक्षा/परीक्षण"]
+  ];
+  for(const [re,e,h] of pairs){en=en.replace(re,e);hi=hi.replace(re,h)}
+  if(type==="Holiday Notice") en="This is to inform all students and parents that "+en+". The school will remain closed as mentioned above. Kindly take note of the holiday.";
+  else if(type==="Parent Meeting") en="All parents are requested to take note of the following information: "+en+". Kindly ensure your presence as required.";
+  else if(type==="Exam / Test") en="This is to inform all students and parents that the following examination/test information is important: "+en+". Please make the necessary preparations.";
+  else if(type==="Important Reminder") en="This is an important reminder for all students and parents: "+en+". Kindly take note and make the necessary arrangements.";
+  else en="This is to inform all students and parents that "+en+". Kindly take note of this information and make the necessary arrangements.";
+  if(!/[।]$/.test(hi))hi+="।";
+  hi="सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि "+hi+" कृपया इस सूचना का ध्यान रखें और आवश्यक व्यवस्था करें।";
+  return {english:en.replace(/\\s+/g," ").trim(),hindi:hi.replace(/\\s+/g," ").trim()};
+}
+async function genNotice(){
+  let t=document.getElementById("topic").value.trim(),type=document.getElementById("type").value;
+  if(!t)return toast("सूचना लिखें");
+  toast("Notice तैयार हो रहा है...");
+  const out=freeNoticeRewrite(t,type);
+  window.onNativeAiNotice("OK","ENGLISH:\n"+out.english+"\nHINDI:\n"+out.hindi);
+}
 window.onNativeAiNotice=function(status,payload){if(status!=="OK"){toast(payload||"AI notice failed");return}let text=String(payload||""),m=text.match(/ENGLISH:\s*([\s\S]*?)(?=\n\s*HINDI:|$)/i),h=text.match(/HINDI:\s*([\s\S]*)$/i),en=(m?.[1]||"").trim(),hi=(h?.[1]||"").trim();if(!en||!hi){toast("AI ने अधूरा notice दिया");return}let type=document.getElementById("type").value,d=dateText();state.noticeHistory.unshift({date:d,type,topic:document.getElementById("topic").value.trim(),english:en,hindi:hi});save();document.getElementById("noticeView").innerHTML=logo()+'<h2>'+esc(state.school)+'</h2><div class="rule"></div><b>NOTICE / सूचना</b><div class="muted">Date / दिनांक: '+d+'</div><p><b>'+esc(type)+'</b></p><div class="body"><p><b>Dear Parents/Students,</b></p><p>'+esc(en)+'</p><hr><p class="hindi"><b>प्रिय अभिभावकों एवं विद्यार्थियों</b></p><p class="hindi">'+esc(hi)+'</p></div><p style="text-align:right">Regards / सादर,<br><b>'+esc(state.school)+'</b></p>';document.getElementById("noticeCard").style.display="block";toast("AI notice तैयार है")}
 function noticeText(){let n=state.noticeHistory[0];return n?"🏫 "+state.school+"\n\nNOTICE\nDate: "+n.date+"\n"+n.type+"\n\nDear Parents/Students,\n"+n.english+"\n\nप्रिय अभिभावकों/विद्यार्थियों,\n"+n.hindi+"\n\nRegards,\n"+state.school:""}
 async function shareNotice(){let t=noticeText();if(navigator.share){try{await navigator.share({title:"School Notice",text:t})}catch(e){}}else copyText(t)}
