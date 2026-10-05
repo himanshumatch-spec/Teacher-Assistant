@@ -33,7 +33,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
     private static final String APP_URL = "file:///android_asset/index.html";
-    private static final String OPENAI_URL = "https://api.openai.com/v1/responses";
+    private static final String NOTICE_AI_URL = "https://school-teacher-gfsg.hatchable.site/api/notice-ai";
 
     public class AndroidShare {
         @JavascriptInterface
@@ -61,7 +61,9 @@ public class MainActivity extends AppCompatActivity {
                     share.putExtra(Intent.EXTRA_TEXT, "School Notice");
                     share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     share.setClipData(ClipData.newRawUri("School Notice", uri));
-                    startActivity(Intent.createChooser(share, "Share Notice Image"));
+                    Intent chooser = Intent.createChooser(share, "Share Notice Image");
+                    chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    startActivity(chooser);
                 } catch (Exception e) {
                     android.widget.Toast.makeText(MainActivity.this, "Could not share notice image", android.widget.Toast.LENGTH_SHORT).show();
                 }
@@ -71,30 +73,23 @@ public class MainActivity extends AppCompatActivity {
 
     public class AndroidAI {
         @JavascriptInterface
-        public void rewriteNotice(String source, String type, String school, String apiKey) {
-            if (apiKey == null || apiKey.trim().isEmpty()) {
-                runOnUiThread(() -> webView.evaluateJavascript("window.onNativeAiNotice('ERROR','OpenAI API key required')", null));
-                return;
-            }
+        public void rewriteNotice(String source, String type, String school) {
             new Thread(() -> {
                 HttpURLConnection conn = null;
                 try {
                     JSONObject payload = new JSONObject();
-                    payload.put("model", "gpt-6-luna");
-                    payload.put("instructions",
-                            "You are a professional Indian school notice editor. Convert the user's Hindi, English, or Hinglish instructions into a clear, factual, formal school notice. Preserve every fact, date, time, name, class detail, fee, and instruction. Never invent facts. Return exactly two sections using these markers and nothing else: ENGLISH: followed by the complete formal English notice body, then HINDI: followed by the complete formal Hindi notice body. The Hindi section must be entirely in Devanagari except unavoidable proper nouns, numbers, dates, or official abbreviations. Do not translate the school name unless asked.");
-                    payload.put("input",
-                            "School: " + safe(school, 120) + "\nNotice type: " + safe(type, 80) +
-                            "\nUser instruction: " + safe(source, 2500));
+                    payload.put("text", safe(source, 2500));
+                    payload.put("type", safe(type, 80));
+                    payload.put("school", safe(school, 120));
 
-                    URL url = new URL(OPENAI_URL);
+                    URL url = new URL(NOTICE_AI_URL);
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestMethod("POST");
                     conn.setConnectTimeout(20000);
                     conn.setReadTimeout(60000);
                     conn.setDoOutput(true);
-                    conn.setRequestProperty("Authorization", "Bearer " + apiKey.trim());
                     conn.setRequestProperty("Content-Type", "application/json");
+                    conn.setRequestProperty("x-teacher-assistant-app", "teacher-assistant-v1");
                     byte[] body = payload.toString().getBytes(StandardCharsets.UTF_8);
                     try (OutputStream out = conn.getOutputStream()) { out.write(body); }
 
@@ -102,23 +97,23 @@ public class MainActivity extends AppCompatActivity {
                     InputStream stream = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
                     String responseBody = readAll(stream);
                     if (code < 200 || code >= 300) {
-                        String msg = "OpenAI request failed";
+                        String msg = "AI notice service unavailable";
                         try {
                             JSONObject err = new JSONObject(responseBody);
-                            JSONObject e = err.optJSONObject("error");
-                            if (e != null) msg = e.optString("message", msg);
+                            msg = err.optString("error", msg);
                         } catch (Exception ignored) {}
                         postAiError(msg);
                         return;
                     }
 
                     JSONObject response = new JSONObject(responseBody);
-                    String text = extractOutputText(response);
-                    if (text.isEmpty()) {
-                        postAiError("OpenAI returned an empty response");
+                    String english = response.optString("english", "");
+                    String hindi = response.optString("hindi", "");
+                    if (english.isEmpty() || hindi.isEmpty()) {
+                        postAiError("AI returned an incomplete notice");
                         return;
                     }
-                    postAiResult(text);
+                    postAiResult("ENGLISH:\n" + english + "\nHINDI:\n" + hindi);
                 } catch (Exception e) {
                     postAiError(e.getMessage() == null ? "AI request failed" : e.getMessage());
                 } finally {
