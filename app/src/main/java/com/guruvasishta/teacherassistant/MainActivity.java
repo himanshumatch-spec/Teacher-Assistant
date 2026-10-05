@@ -2,32 +2,38 @@ package com.guruvasishta.teacherassistant;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.content.Context;
 import android.content.ClipData;
-import android.content.pm.PackageManager;
-import android.graphics.Bitmap;
-import android.graphics.Canvas;
-import android.net.Uri;
-import android.util.Base64;
-import android.webkit.JavascriptInterface;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.util.Base64;
 import android.webkit.CookieManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.webkit.WebResourceRequest;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
     private static final String APP_URL = "file:///android_asset/index.html";
+    private static final String OPENAI_URL = "https://api.openai.com/v1/responses";
 
     public class AndroidShare {
         @JavascriptInterface
@@ -36,11 +42,13 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     String base64 = dataUrl.substring(dataUrl.indexOf(",") + 1);
                     byte[] bytes = Base64.decode(base64, Base64.DEFAULT);
-                    File dir = new File(getCacheDir(), "shared");
-                    if (!dir.exists()) dir.mkdirs();
+                    File baseDir = getExternalCacheDir() != null ? getExternalCacheDir() : getCacheDir();
+                    File dir = new File(baseDir, "shared");
+                    if (!dir.exists() && !dir.mkdirs()) throw new Exception("Cannot create share folder");
                     File file = new File(dir, fileName);
                     try (FileOutputStream out = new FileOutputStream(file)) {
                         out.write(bytes);
+                        out.flush();
                     }
                     Uri uri = androidx.core.content.FileProvider.getUriForFile(
                             MainActivity.this,
@@ -48,8 +56,9 @@ public class MainActivity extends AppCompatActivity {
                             file
                     );
                     Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("image/png");
+                    share.setType("image/*");
                     share.putExtra(Intent.EXTRA_STREAM, uri);
+                    share.putExtra(Intent.EXTRA_TEXT, "School Notice");
                     share.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     share.setClipData(ClipData.newRawUri("School Notice", uri));
                     startActivity(Intent.createChooser(share, "Share Notice Image"));
@@ -59,6 +68,123 @@ public class MainActivity extends AppCompatActivity {
             });
         }
     }
+
+    public class AndroidAI {
+        @JavascriptInterface
+        public void rewriteNotice(String source, String type, String school, String apiKey) {
+            if (apiKey == null || apiKey.trim().isEmpty()) {
+                runOnUiThread(() -> webView.evaluateJavascript("window.onNativeAiNotice('ERROR','OpenAI API key required')", null));
+                return;
+            }
+            new Thread(() -> {
+                HttpURLConnection conn = null;
+                try {
+                    JSONObject payload = new JSONObject();
+                    payload.put("model", "gpt-6-luna");
+                    payload.put("instructions",
+                            "You are a professional Indian school notice editor. Convert the user's Hindi, English, or Hinglish instructions into a clear, factual, formal school notice. Preserve every fact, date, time, name, class detail, fee, and instruction. Never invent facts. Return exactly two sections using these markers and nothing else: ENGLISH: followed by the complete formal English notice body, then HINDI: followed by the complete formal Hindi notice body. The Hindi section must be entirely in Devanagari except unavoidable proper nouns, numbers, dates, or official abbreviations. Do not translate the school name unless asked.");
+                    payload.put("input",
+                            "School: " + safe(school, 120) + "\nNotice type: " + safe(type, 80) +
+                            "\nUser instruction: " + safe(source, 2500));
+
+                    URL url = new URL(OPENAI_URL);
+                    conn = (HttpURLConnection) url.openConnection();
+                    conn.setRequestMethod("POST");
+                    conn.setConnectTimeout(20000);
+                    conn.setReadTimeout(60000);
+                    conn.setDoOutput(true);
+                    conn.setRequestProperty("Authorization", "Bearer " + apiKey.trim());
+                    conn.setRequestProperty("Content-Type", "application/json");
+                    byte[] body = payload.toString().getBytes(StandardCharsets.UTF_8);
+                    try (OutputStream out = conn.getOutputStream()) { out.write(body); }
+
+                    int code = conn.getResponseCode();
+                    InputStream stream = code >= 200 && code < 300 ? conn.getInputStream() : conn.getErrorStream();
+                    String responseBody = readAll(stream);
+                    if (code < 200 || code >= 300) {
+                        String msg = "OpenAI request failed";
+                        try {
+                            JSONObject err = new JSONObject(responseBody);
+                            JSONObject e = err.optJSONObject("error");
+                            if (e != null) msg = e.optString("message", msg);
+                        } catch (Exception ignored) {}
+                        postAiError(msg);
+                        return;
+                    }
+
+                    JSONObject response = new JSONObject(responseBody);
+                    String text = extractOutputText(response);
+                    if (text.isEmpty()) {
+                        postAiError("OpenAI returned an empty response");
+                        return;
+                    }
+                    postAiResult(text);
+                } catch (Exception e) {
+                    postAiError(e.getMessage() == null ? "AI request failed" : e.getMessage());
+                } finally {
+                    if (conn != null) conn.disconnect();
+                }
+            }).start();
+        }
+
+        private String safe(String value, int max) {
+            if (value == null) return "";
+            String s = value.trim();
+            return s.length() > max ? s.substring(0, max) : s;
+        }
+
+        private String readAll(InputStream stream) throws Exception {
+            if (stream == null) return "";
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) sb.append(line);
+            }
+            return sb.toString();
+        }
+
+        private String extractOutputText(JSONObject response) {
+            StringBuilder sb = new StringBuilder();
+            JSONArray output = response.optJSONArray("output");
+            if (output == null) return "";
+            for (int i = 0; i < output.length(); i++) {
+                JSONObject item = output.optJSONObject(i);
+                if (item == null) continue;
+                JSONArray content = item.optJSONArray("content");
+                if (content == null) continue;
+                for (int j = 0; j < content.length(); j++) {
+                    JSONObject part = content.optJSONObject(j);
+                    if (part != null && "output_text".equals(part.optString("type"))) {
+                        String t = part.optString("text", "");
+                        if (!t.isEmpty()) {
+                            if (sb.length() > 0) sb.append("\n");
+                            sb.append(t);
+                        }
+                    }
+                }
+            }
+            return sb.toString().trim();
+        }
+
+        private void postAiResult(String text) {
+            runOnUiThread(() -> {
+                try {
+                    String quoted = JSONObject.quote(text);
+                    webView.evaluateJavascript("window.onNativeAiNotice('OK'," + quoted + ")", null);
+                } catch (Exception e) {
+                    webView.evaluateJavascript("window.onNativeAiNotice('ERROR','Could not return AI result')", null);
+                }
+            });
+        }
+
+        private void postAiError(String message) {
+            runOnUiThread(() -> {
+                String safe = message == null ? "AI request failed" : message.replace("\\", "\\\\").replace("'", "\\'");
+                webView.evaluateJavascript("window.onNativeAiNotice('ERROR','" + safe + "')", null);
+            });
+        }
+    }
+
     private static final int FILE_CHOOSER_REQUEST = 1001;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
@@ -80,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
         s.setSupportZoom(false);
         s.setAllowFileAccess(true);
         s.setAllowContentAccess(true);
-        s.setUserAgentString(s.getUserAgentString() + " TeacherAssistantAndroid/2.0");
+        s.setUserAgentString(s.getUserAgentString() + " TeacherAssistantAndroid/3.0");
 
         CookieManager.getInstance().setAcceptCookie(true);
 
@@ -95,6 +221,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidShare(), "AndroidShare");
+        webView.addJavascriptInterface(new AndroidAI(), "AndroidAI");
 
         webView.setWebChromeClient(new WebChromeClient() {
             @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
