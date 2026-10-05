@@ -6,6 +6,8 @@ import android.content.ClipData;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Build;
+import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.CookieManager;
 import android.webkit.JavascriptInterface;
@@ -24,6 +26,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -83,6 +86,56 @@ public class MainActivity extends AppCompatActivity {
                             "Could not share notice image",
                             android.widget.Toast.LENGTH_LONG
                     ).show();
+                }
+            });
+        }
+    }
+
+    public class AndroidSaveImage {
+        @JavascriptInterface
+        public void saveImage(String dataUrl, String fileName) {
+            runOnUiThread(() -> {
+                try {
+                    int comma = dataUrl.indexOf(",");
+                    if (comma < 0) throw new Exception("Invalid image data");
+                    byte[] bytes = Base64.decode(dataUrl.substring(comma + 1), Base64.DEFAULT);
+                    String safeName = (fileName == null || fileName.trim().isEmpty())
+                            ? "school-notice.png" : fileName.replaceAll("[^a-zA-Z0-9._-]", "_");
+                    if (!safeName.toLowerCase().endsWith(".png")) safeName += ".png";
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        android.content.ContentValues values = new android.content.ContentValues();
+                        values.put(MediaStore.Images.Media.DISPLAY_NAME, safeName);
+                        values.put(MediaStore.Images.Media.MIME_TYPE, "image/png");
+                        values.put(MediaStore.Images.Media.RELATIVE_PATH,
+                                android.os.Environment.DIRECTORY_PICTURES + "/Teacher Assistant");
+                        values.put(MediaStore.Images.Media.IS_PENDING, 1);
+                        Uri uri = getContentResolver().insert(
+                                MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values);
+                        if (uri == null) throw new Exception("Could not create Gallery image");
+                        try (OutputStream out = getContentResolver().openOutputStream(uri)) {
+                            if (out == null) throw new Exception("Could not open image");
+                            out.write(bytes);
+                        }
+                        values.clear();
+                        values.put(MediaStore.Images.Media.IS_PENDING, 0);
+                        getContentResolver().update(uri, values, null, null);
+                        android.widget.Toast.makeText(MainActivity.this,
+                                "Notice PNG saved in Gallery → Teacher Assistant",
+                                android.widget.Toast.LENGTH_LONG).show();
+                    } else {
+                        pendingImageBytes = bytes;
+                        pendingImageName = safeName;
+                        Intent create = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                        create.setType("image/png");
+                        create.putExtra(Intent.EXTRA_TITLE, safeName);
+                        startActivityForResult(create, CREATE_IMAGE_REQUEST);
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    android.widget.Toast.makeText(MainActivity.this,
+                            "Could not save notice image",
+                            android.widget.Toast.LENGTH_LONG).show();
                 }
             });
         }
@@ -198,6 +251,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private static final int FILE_CHOOSER_REQUEST = 1001;
+    private static final int CREATE_IMAGE_REQUEST = 1002;
+    private byte[] pendingImageBytes;
+    private String pendingImageName;
     private WebView webView;
     private ValueCallback<Uri[]> fileCallback;
 
@@ -233,6 +289,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidShare(), "AndroidShare");
+        webView.addJavascriptInterface(new AndroidSaveImage(), "AndroidSaveImage");
         webView.addJavascriptInterface(new AndroidAI(), "AndroidAI");
 
         webView.setWebChromeClient(new WebChromeClient() {
@@ -262,6 +319,20 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == CREATE_IMAGE_REQUEST) {
+            if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null && pendingImageBytes != null) {
+                try (OutputStream out = getContentResolver().openOutputStream(data.getData())) {
+                    if (out == null) throw new Exception("Could not open destination");
+                    out.write(pendingImageBytes);
+                    android.widget.Toast.makeText(this, "Notice PNG saved", android.widget.Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
+                    android.widget.Toast.makeText(this, "Could not save notice image", android.widget.Toast.LENGTH_LONG).show();
+                }
+            }
+            pendingImageBytes = null;
+            pendingImageName = null;
+            return;
+        }
         if (requestCode == FILE_CHOOSER_REQUEST && fileCallback != null) {
             Uri[] results = null;
             if (resultCode == Activity.RESULT_OK && data != null) {
