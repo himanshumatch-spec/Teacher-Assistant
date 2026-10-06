@@ -177,6 +177,32 @@ async function noticeImageCanvas(){
 
   return cv;
 }
+async function saveNoticeImage(){
+  try{
+    toast("PNG तैयार हो रहा है...");
+    const cv = await noticeImageCanvas();
+    if(!cv) return toast("पहले Notice generate करें");
+    const dataUrl = cv.toDataURL("image/png");
+    const fileName = "School-Notice-" + (state.className || "Class") + "-" + (state.noticeHistory[0]?.date || "Notice").replace(/[^0-9A-Za-z_-]/g,"-") + ".png";
+
+    if(window.AndroidSaveImage && AndroidSaveImage.saveImage){
+      AndroidSaveImage.saveImage(dataUrl,fileName);
+      return;
+    }
+
+    const a=document.createElement("a");
+    a.href=dataUrl;
+    a.download=fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast("Notice PNG saved");
+  }catch(e){
+    console.error(e);
+    toast("PNG save नहीं हो पाया");
+  }
+}
+
 function settings(){document.getElementById("content").innerHTML='<div class="settingsHero">'+logo()+'<div><span class="eyebrow">SCHOOL PROFILE</span><h2>Settings</h2><p>School name and your class.</p></div></div><div class="card"><div class="label">SCHOOL NAME</div><input id="school" class="field" value="'+esc(state.school)+'"><div class="label">MY CLASS</div><input id="className" class="field" value="'+esc(state.className)+'" placeholder="Example: 10D"><div class="label">SCHOOL LOGO</div><input id="logoInput" type="file" accept="image/*" class="field"><button class="btn blue full" onclick="saveSettings()">Save School Profile</button></div><div class="card"><b>Data</b><p class="muted">This standalone APK stores your attendance and notices on this phone.</p><button class="btn secondary" onclick="resetData()">Reset data</button></div>'}
 function saveSettings(){state.school=document.getElementById("school").value.trim()||DEF.school;let c=document.getElementById("className").value.trim().toUpperCase()||"10D";if(!state.classes[c])state.classes[c]=[];state.className=c;let f=document.getElementById("logoInput").files[0];if(f){let rd=new FileReader();rd.onload=()=>{state.logo=rd.result;save();absent.clear();shell();toast("Settings saved")};rd.readAsDataURL(f)}else{save();absent.clear();shell();toast("Settings saved")}}
 function resetData(){if(confirm("Reset all app data?")){localStorage.removeItem(KEY);location.reload()}}
