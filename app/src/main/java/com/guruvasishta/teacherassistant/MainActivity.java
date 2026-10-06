@@ -16,6 +16,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -35,7 +36,7 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String APP_URL = "file:///android_asset/index.html";
+    private static final String APP_URL = "https://appassets.androidplatform.net/assets/index.html";
     private static final String NOTICE_AI_URL = "https://school-teacher-gfsg.hatchable.site/api/notice-ai";
 
     public class AndroidShare {
@@ -320,7 +321,15 @@ public class MainActivity extends AppCompatActivity {
 
         CookieManager.getInstance().setAcceptCookie(true);
 
+        WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
+                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
+                .build();
+
         webView.setWebViewClient(new WebViewClient() {
+            @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                return assetLoader.shouldInterceptRequest(request.getUrl());
+            }
+
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
