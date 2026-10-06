@@ -53,7 +53,7 @@ function toggle(i){absent.has(i)?absent.delete(i):absent.add(i);attendance()}
 function addStudent(){let n=prompt("Student name");if(n){state.classes[state.className].push(n.trim());save();attendance()}}
 function saveAttendance(){let c=state.className,s=state.classes[c]||[],k=dateKey(),r={date:k,displayDate:dateText(),class:c,total:s.length,present:s.length-absent.size,absent:[...absent].sort((a,b)=>a-b).map(i=>({roll:i+1,name:s[i]}))};let i=state.attendanceRecords.findIndex(x=>x.date===k&&x.class===c);i>=0?state.attendanceRecords[i]=r:state.attendanceRecords.unshift(r);save();toast("Attendance saved in Register")}
 function reportText(){let c=state.className,s=state.classes[c]||[],a=[...absent].sort((x,y)=>x-y);return "🏫 "+state.school+"\n\n📋 CLASS ATTENDANCE\nClass: "+c+"\nDate: "+dateText()+"\n\n👥 Total: "+s.length+"\n✅ Present: "+(s.length-a.length)+"\n❌ Absent: "+a.length+"\n\nAbsent Students:\n"+(a.length?a.map(i=>(i+1)+". "+s[i]).join("\n"):"None — All students are present.")+"\n\nRegards,\n"+state.school}
-async function share(){saveAttendance();let t=reportText();if(navigator.share){try{await navigator.share({title:"Attendance",text:t})}catch(e){}}else{copyText(t)}}
+async function share(){saveAttendance();let t=reportText();if(window.AndroidWhatsApp&&AndroidWhatsApp.shareText){AndroidWhatsApp.shareText(t,"Teacher Assistant Attendance");return}if(navigator.share){try{await navigator.share({title:"Attendance",text:t})}catch(e){}}else{copyText(t)}}
 function copyText(t){try{navigator.clipboard.writeText(t);toast("Copied. Paste in WhatsApp.")}catch(e){toast("Copy unavailable")}}
 function copyReport(){saveAttendance();copyText(reportText())}
 function register(){let c=state.className,s=state.classes[c]||[],mk=(new Date()).toISOString().slice(0,7),r=state.attendanceRecords.filter(x=>x.class===c&&x.date.startsWith(mk)).sort((a,b)=>a.date.localeCompare(b.date)),abs={};s.forEach((_,i)=>abs[i+1]=0);r.forEach(x=>(x.absent||[]).forEach(a=>abs[a.roll]++));let rows=s.map((n,i)=>{let ab=abs[i+1]||0,pr=Math.max(0,r.length-ab),pc=r.length?Math.round(pr/r.length*100):0;return "<tr><td>"+(i+1)+"</td><td><b>"+esc(n)+"</b></td><td>"+pr+"</td><td>"+ab+"</td><td>"+pc+"%</td></tr>"}).join("");let daily=r.map(x=>"<div class='day'><b>"+esc(x.displayDate||x.date)+"</b><small>"+x.present+" Present • "+x.absent.length+" Absent</small><div class='abs'>"+(x.absent.length?x.absent.map(a=>a.roll+". "+esc(a.name)).join(", "):"All students present")+"</div></div>").join("");document.getElementById("content").innerHTML='<div class="hero"><div><span class="eyebrow">ATTENDANCE REGISTER</span><h2>Monthly Register</h2><p>'+esc(c)+' • '+new Date().toLocaleDateString("en-IN",{month:"long",year:"numeric"})+'</p></div><div class="heroIcon">▦</div></div><div class="stats"><div class="stat total"><span>Attendance Days</span><b>'+r.length+'</b></div><div class="stat present"><span>Total Present</span><b>'+r.reduce((n,x)=>n+x.present,0)+'</b></div><div class="stat absent"><span>Total Absent</span><b>'+r.reduce((n,x)=>n+x.absent.length,0)+'</b></div></div><div class="card"><b>Student Register</b><div class="register"><table><thead><tr><th>Roll</th><th>Student</th><th>Present</th><th>Absent</th><th>%</th></tr></thead><tbody>'+rows+'</tbody></table></div></div><div class="card"><b>Daily Attendance</b>'+(daily||'<div class="empty">No attendance saved yet. Mark today’s attendance and tap Save Attendance.</div>')+'</div>'}
@@ -94,48 +94,88 @@ async function genNotice(){
 }
 window.onNativeAiNotice=function(status,payload){if(status!=="OK"){toast(payload||"AI notice failed");return}let text=String(payload||""),m=text.match(/ENGLISH:\s*([\s\S]*?)(?=\n\s*HINDI:|$)/i),h=text.match(/HINDI:\s*([\s\S]*)$/i),en=(m?.[1]||"").trim(),hi=(h?.[1]||"").trim();if(!en||!hi){toast("AI ने अधूरा notice दिया");return}let type=document.getElementById("type").value,d=dateText();state.noticeHistory.unshift({date:d,type,topic:document.getElementById("topic").value.trim(),english:en,hindi:hi});save();document.getElementById("noticeView").innerHTML=logo()+'<h2>'+esc(state.school)+'</h2><div class="rule"></div><b>NOTICE / सूचना</b><div class="muted">Date / दिनांक: '+d+'</div><p><b>'+esc(type)+'</b></p><div class="body"><p><b>Dear Parents/Students,</b></p><p>'+esc(en)+'</p><hr><p class="hindi"><b>प्रिय अभिभावकों एवं विद्यार्थियों</b></p><p class="hindi">'+esc(hi)+'</p></div><p style="text-align:right">Regards / सादर,<br><b>'+esc(state.school)+'</b></p>';document.getElementById("noticeCard").style.display="block";toast("AI notice तैयार है")}
 function noticeText(){let n=state.noticeHistory[0];return n?"🏫 "+state.school+"\n\nNOTICE\nDate: "+n.date+"\n"+n.type+"\n\nDear Parents/Students,\n"+n.english+"\n\nप्रिय अभिभावकों/विद्यार्थियों,\n"+n.hindi+"\n\nRegards,\n"+state.school:""}
-async function shareNotice(){let t=noticeText();if(navigator.share){try{await navigator.share({title:"School Notice",text:t})}catch(e){}}else copyText(t)}
+async function shareNotice(){let t=noticeText();if(window.AndroidWhatsApp&&AndroidWhatsApp.shareText){AndroidWhatsApp.shareText(t,"Teacher Assistant Notice");return}if(navigator.share){try{await navigator.share({title:"School Notice",text:t})}catch(e){}}else copyText(t)}
 function copyNotice(){copyText(noticeText())}
 async function noticeImageCanvas(){
   let n=state.noticeHistory[0]; if(!n) return null;
-  let cv=document.createElement("canvas"),W=1080,H=1450,ctx=cv.getContext("2d");
   let logoImg=null, logoSrc=document.querySelector("#noticeView .logo")?.src;
-  if(logoSrc){logoImg=new Image();try{await new Promise((resolve,reject)=>{logoImg.onload=resolve;logoImg.onerror=reject;logoImg.src=logoSrc})}catch(e){logoImg=null}}
-  cv.width=W;cv.height=H;
-  let g=ctx.createLinearGradient(0,0,W,H);g.addColorStop(0,"#f8fbff");g.addColorStop(1,"#eef3ff");ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  if(logoSrc){
+    logoImg=new Image();
+    try{await new Promise((resolve,reject)=>{logoImg.onload=resolve;logoImg.onerror=reject;logoImg.src=logoSrc})}catch(e){logoImg=null}
+  }
+
+  const W=1080, margin=110, contentW=W-margin*2;
+  const measure=document.createElement("canvas").getContext("2d");
+  const wrap=(text,font,maxWidth)=>{
+    measure.font=font;
+    const words=String(text||"").split(/\s+/);
+    const lines=[]; let line="";
+    for(const word of words){
+      const test=line?line+" "+word:word;
+      if(measure.measureText(test).width>maxWidth && line){lines.push(line);line=word}
+      else line=test;
+    }
+    if(line) lines.push(line);
+    return lines.length?lines:[""];
+  };
+
+  const enFont="500 29px system-ui";
+  const hiFont="500 30px 'Noto Sans Devanagari','Mangal',system-ui";
+  const enLines=wrap(n.english,enFont,contentW);
+  const hiLines=wrap(n.hindi,hiFont,contentW);
+  const H=Math.max(1450, 720 + enLines.length*50 + hiLines.length*56 + 230);
+
+  let cv=document.createElement("canvas"); cv.width=W; cv.height=H;
+  let ctx=cv.getContext("2d");
+  let g=ctx.createLinearGradient(0,0,W,H);
+  g.addColorStop(0,"#f8fbff");g.addColorStop(1,"#eef3ff");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+
   ctx.fillStyle="#152b7a";ctx.fillRect(0,0,W,22);
   ctx.fillStyle="#ffffff";ctx.fillRect(55,55,W-110,H-110);
   ctx.strokeStyle="#dbe3f2";ctx.lineWidth=2;ctx.strokeRect(55,55,W-110,H-110);
+
   ctx.textAlign="center";
-  if(logoImg){ctx.save();ctx.beginPath();ctx.arc(W/2,105,48,0,Math.PI*2);ctx.clip();ctx.drawImage(logoImg,W/2-48,57,96,96);ctx.restore()}
-  ctx.fillStyle="#152b7a";ctx.font="700 42px system-ui";ctx.fillText(state.school,W/2,190);
-  ctx.fillStyle="#315bea";ctx.font="800 34px system-ui";ctx.fillText("NOTICE",W/2,225);
-  ctx.strokeStyle="#315bea";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(190,255);ctx.lineTo(W-190,255);ctx.stroke();
-  ctx.fillStyle="#687386";ctx.font="500 24px system-ui";ctx.fillText("Date: "+n.date,W/2,305);
-  ctx.fillStyle="#182033";ctx.font="800 30px system-ui";ctx.fillText(n.type,W/2,365);
-  let y=440;
-  ctx.textAlign="left";ctx.fillStyle="#182033";ctx.font="700 27px system-ui";ctx.fillText("Dear Parents/Students,",110,y);y+=58;
-  y=wrapCanvas(ctx,n.english,110,y,W-220,29,1.65);y+=45;
-  ctx.strokeStyle="#e1e6ef";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(110,y);ctx.lineTo(W-110,y);ctx.stroke();y+=50;
-  ctx.font="700 27px 'Noto Sans Devanagari',system-ui";ctx.fillText("प्रिय अभिभावकों/विद्यार्थियों,",110,y);y+=58;
-  y=wrapCanvas(ctx,n.hindi,110,y,W-220,28,1.7);y+=70;
-  ctx.textAlign="right";ctx.fillStyle="#182033";ctx.font="500 25px system-ui";ctx.fillText("Regards,",W-120,y);y+=36;ctx.font="800 27px system-ui";ctx.fillText(state.school,W-120,y);
+  if(logoImg){
+    ctx.save();ctx.beginPath();ctx.arc(W/2,115,50,0,Math.PI*2);ctx.clip();
+    ctx.drawImage(logoImg,W/2-50,65,100,100);ctx.restore();
+  }
+
+  ctx.fillStyle="#152b7a";ctx.font="700 42px system-ui";ctx.fillText(state.school,W/2,205);
+  ctx.fillStyle="#315bea";ctx.font="800 36px system-ui";ctx.fillText("NOTICE / सूचना",W/2,252);
+  ctx.strokeStyle="#315bea";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(190,282);ctx.lineTo(W-190,282);ctx.stroke();
+  ctx.fillStyle="#687386";ctx.font="500 24px system-ui";ctx.fillText("Date: "+n.date,W/2,330);
+  ctx.fillStyle="#182033";ctx.font="800 30px system-ui";ctx.fillText(n.type,W/2,390);
+
+  let y=470;
+  ctx.textAlign="left";
+  ctx.fillStyle="#182033";
+  ctx.font="700 29px system-ui";
+  ctx.fillText("Dear Parents/Students,",margin,y);
+  y+=58;
+
+  ctx.font=enFont;
+  for(const line of enLines){ctx.fillText(line,margin,y);y+=50}
+  y+=35;
+
+  ctx.strokeStyle="#e1e6ef";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(margin,y);ctx.lineTo(W-margin,y);ctx.stroke();
+  y+=55;
+
+  ctx.fillStyle="#182033";
+  ctx.font="700 30px 'Noto Sans Devanagari','Mangal',system-ui";
+  ctx.fillText("प्रिय अभिभावकों एवं विद्यार्थियों,",margin,y);
+  y+=60;
+
+  ctx.font=hiFont;
+  for(const line of hiLines){ctx.fillText(line,margin,y);y+=56}
+  y+=60;
+
+  ctx.textAlign="right";
+  ctx.fillStyle="#182033";
+  ctx.font="500 26px system-ui";ctx.fillText("Regards,",W-margin,y);y+=38;
+  ctx.font="800 28px system-ui";ctx.fillText(state.school,W-margin,y);
+
   return cv;
-}
-function wrapCanvas(ctx,text,x,y,maxWidth,fontSize,lineHeight){
-  ctx.font=(ctx.font.includes("Noto")?"700 ":"500 ")+fontSize+"px "+(ctx.font.includes("Noto")?"'Noto Sans Devanagari',system-ui":"system-ui");
-  let words=String(text).split(/\\s+/),line="";
-  for(let w of words){let test=line?line+" "+w:w;if(ctx.measureText(test).width>maxWidth&&line){ctx.fillText(line,x,y);y+=fontSize*lineHeight;line=w}else line=test}
-  if(line){ctx.fillText(line,x,y);y+=fontSize*lineHeight}
-  return y;
-}
-async function saveNoticeImage(){
-  let cv=await noticeImageCanvas();if(!cv)return toast("Generate a notice first");
-  let data=cv.toDataURL("image/png");
-  if(window.AndroidSaveImage&&AndroidSaveImage.saveImage){AndroidSaveImage.saveImage(data,"school-notice.png");return}
-  try{
-    let a=document.createElement("a");a.href=data;a.download="school-notice.png";a.click();toast("Notice PNG saved");
-  }catch(e){toast("Image save unavailable")}
 }
 function settings(){document.getElementById("content").innerHTML='<div class="settingsHero">'+logo()+'<div><span class="eyebrow">SCHOOL PROFILE</span><h2>Settings</h2><p>School name and your class.</p></div></div><div class="card"><div class="label">SCHOOL NAME</div><input id="school" class="field" value="'+esc(state.school)+'"><div class="label">MY CLASS</div><input id="className" class="field" value="'+esc(state.className)+'" placeholder="Example: 10D"><div class="label">SCHOOL LOGO</div><input id="logoInput" type="file" accept="image/*" class="field"><button class="btn blue full" onclick="saveSettings()">Save School Profile</button></div><div class="card"><b>Data</b><p class="muted">This standalone APK stores your attendance and notices on this phone.</p><button class="btn secondary" onclick="resetData()">Reset data</button></div>'}
 function saveSettings(){state.school=document.getElementById("school").value.trim()||DEF.school;let c=document.getElementById("className").value.trim().toUpperCase()||"10D";if(!state.classes[c])state.classes[c]=[];state.className=c;let f=document.getElementById("logoInput").files[0];if(f){let rd=new FileReader();rd.onload=()=>{state.logo=rd.result;save();absent.clear();shell();toast("Settings saved")};rd.readAsDataURL(f)}else{save();absent.clear();shell();toast("Settings saved")}}
