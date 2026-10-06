@@ -141,6 +141,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public class AndroidWhatsApp {
+        @JavascriptInterface
+        public void shareText(String text, String title) {
+            runOnUiThread(() -> {
+                try {
+                    if (text == null) text = "";
+                    Intent send = new Intent(Intent.ACTION_SEND);
+                    send.setType("text/plain");
+                    send.putExtra(Intent.EXTRA_TEXT, text);
+                    if (title != null && !title.trim().isEmpty()) {
+                        send.putExtra(Intent.EXTRA_TITLE, title);
+                    }
+
+                    // Prefer WhatsApp Messenger, then WhatsApp Business.
+                    if (isPackageInstalled("com.whatsapp")) {
+                        send.setPackage("com.whatsapp");
+                    } else if (isPackageInstalled("com.whatsapp.w4b")) {
+                        send.setPackage("com.whatsapp.w4b");
+                    } else {
+                        android.widget.Toast.makeText(
+                                MainActivity.this,
+                                "WhatsApp is not installed",
+                                android.widget.Toast.LENGTH_LONG
+                        ).show();
+                        return;
+                    }
+
+                    startActivity(send);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    android.widget.Toast.makeText(
+                            MainActivity.this,
+                            "Could not open WhatsApp",
+                            android.widget.Toast.LENGTH_LONG
+                    ).show();
+                }
+            });
+        }
+
+        private boolean isPackageInstalled(String packageName) {
+            try {
+                getPackageManager().getPackageInfo(packageName, 0);
+                return true;
+            } catch (Exception e) {
+                return false;
+            }
+        }
+    }
+
     public class AndroidAI {
         @JavascriptInterface
         public void rewriteNotice(String source, String type, String school) {
@@ -298,6 +347,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidShare(), "AndroidShare");
+        webView.addJavascriptInterface(new AndroidWhatsApp(), "AndroidWhatsApp");
         webView.addJavascriptInterface(new AndroidSaveImage(), "AndroidSaveImage");
         webView.addJavascriptInterface(new AndroidAI(), "AndroidAI");
 
