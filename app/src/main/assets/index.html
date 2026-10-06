@@ -61,6 +61,7 @@ function notice(){document.getElementById("content").innerHTML='<div class="noti
 function freeNoticeRewrite(t,type){
   const raw=String(t||"").trim().replace(/[.!?]+$/,"");
   const lower=raw.toLowerCase().replace(/\s+/g," ").trim();
+
   const exact=[
     [/^today is (?:a )?holiday due to some office work$/i,
       "This is to inform all students and parents that the school will remain closed today due to some important official work. Students are advised to stay at home and continue their regular studies. Regular classes will resume as per the school schedule. Kindly take note of the holiday and make the necessary arrangements accordingly.",
@@ -70,7 +71,7 @@ function freeNoticeRewrite(t,type){
       "सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि कल विद्यालय में सभी विद्यार्थियों की उपस्थिति अनिवार्य है। सभी विद्यार्थी निर्धारित समय पर विद्यालय पहुँचें और नियमित समय-सारणी के अनुसार अपनी कक्षाओं में उपस्थित रहें। अभिभावकों से अनुरोध है कि वे अपने बच्चों के समय पर विद्यालय पहुँचने की व्यवस्था सुनिश्चित करें और बिना उचित कारण के उन्हें अनुपस्थित न रखें। कृपया इस निर्देश का ध्यान रखें और विद्यार्थियों की पूर्ण उपस्थिति सुनिश्चित करें।"],
     [/^kal school band rahega$/i,
       "This is to inform all students and parents that the school will remain closed tomorrow. Students are advised to stay at home and use the day productively. Regular classes will resume as per the school schedule. Kindly take note of this information and make the necessary arrangements.",
-      "सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि विद्यालय कल बंद रहेगा। विद्यार्थियों को घर पर रहकर अपने समय का सदुपयोग करने की सलाह दी जाती है। विद्यालय की नियमित कक्षाएँ निर्धारित समय-सारणी के अनुसार पुनः संचालित होंगी। कृपया इस सूचना का ध्यान रखें और आवश्यक व्यवस्था करें।"],
+      "सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि विद्यालय कल बंद रहेगा। विद्यार्थियों को घर पर रहकर अपने समय का सदुपयोग करने की सलाह दी जाती है। विद्यालय की नियमित कक्षाएँ निर्धारित समय-सारणी के अनुसार पुनः संचालित होंगी। कृपया इस सूचना का ध्यान रखें और आवश्यक व्यवस्था करें."],
     [/^kal school khulega$/i,
       "This is to inform all students and parents that the school will open tomorrow as per the regular schedule. All students are requested to reach school on time and attend their classes regularly. Kindly ensure that all necessary preparations are completed before coming to school.",
       "सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि विद्यालय कल निर्धारित नियमित समय-सारणी के अनुसार खुलेगा। सभी विद्यार्थियों से अनुरोध है कि वे समय पर विद्यालय पहुँचें और अपनी कक्षाओं में नियमित रूप से उपस्थित रहें। कृपया विद्यालय आने से पहले सभी आवश्यक तैयारियाँ पूरी कर लें।"],
@@ -80,31 +81,61 @@ function freeNoticeRewrite(t,type){
   ];
   for(const [re,en,hi] of exact) if(re.test(raw)) return {english:en,hindi:hi};
 
-  const isHindi=/[\u0900-\u097F]/.test(raw);
-  const roman=/\b(kal|aaj|parso|school|band|khulega|rahega|baccho?n?|bachcho?n?|parents?|students?|meeting|hai|hoga|baje|zaroori|aana|kuch|wajah)\b/i.test(lower);
-  const toHindi=s=>s
-    .replace(/\btoday\b/gi,"आज").replace(/\btomorrow\b/gi,"कल")
-    .replace(/\bthe school\b/gi,"विद्यालय").replace(/\bschool\b/gi,"विद्यालय")
-    .replace(/\bwill remain closed\b/gi,"बंद रहेगा").replace(/\bholiday\b/gi,"अवकाश")
-    .replace(/\boffice work\b/gi,"कार्यालय के कार्य").replace(/\boffice\b/gi,"कार्यालय")
-    .replace(/\bwork\b/gi,"कार्य").replace(/\bparents?\b/gi,"अभिभावक")
-    .replace(/\bstudents?\b/gi,"विद्यार्थी").replace(/\bchildren\b/gi,"बच्चे")
-    .replace(/\bmeeting\b/gi,"बैठक").replace(/\bmandatory\b/gi,"अनिवार्य")
-    .replace(/\battendance\b/gi,"उपस्थिति").replace(/\bimportant\b/gi,"महत्वपूर्ण")
-    .replace(/\bplease\b/gi,"कृपया").replace(/\bdue to\b/gi,"के कारण")
-    .replace(/\s+/g," ").trim();
-  const toEnglish=s=>s
-    .replace(/आज/g,"today").replace(/कल/g,"tomorrow").replace(/विद्यालय/g,"school")
-    .replace(/关闭/g,"closed").replace(/बंद रहेगा/g,"will remain closed").replace(/बंद/g,"closed")
-    .replace(/अवकाश/g,"holiday").replace(/कार्यालय के कार्य/g,"office work").replace(/कार्यालय/g,"office")
-    .replace(/कार्य/g,"work").replace(/अभिभावकों/g,"parents").replace(/अभिभावक/g,"parents")
-    .replace(/विद्यार्थियों/g,"students").replace(/विद्यार्थी/g,"students").replace(/बच्चों/g,"children")
-    .replace(/बच्चे/g,"children").replace(/बैठक/g,"meeting").replace(/अनिवार्य/g,"mandatory")
-    .replace(/उपस्थिति/g,"attendance").replace(/महत्वपूर्ण/g,"important").replace(/कृपया/g,"please")
-    .replace(/के कारण/g,"due to").replace(/है/g,"is").replace(/\s+/g," ").trim();
+  const toHindi=s=>{
+    let x=String(s||"").toLowerCase();
+    const phrases=[
+      [/civil dress/g,"सामान्य पोशाक"],[/civil clothes/g,"सामान्य पोशाक"],[/formal dress/g,"औपचारिक पोशाक"],
+      [/school uniform/g,"विद्यालय की वर्दी"],[/school time/g,"विद्यालय के समय"],[/office work/g,"कार्यालयीय कार्य"],
+      [/parent meeting/g,"अभिभावक-शिक्षक बैठक"],[/parent-teacher meeting/g,"अभिभावक-शिक्षक बैठक"],
+      [/today/g,"आज"],[/tomorrow/g,"कल"],[/day after tomorrow/g,"परसों"],[/the school/g,"विद्यालय"],[/school/g,"विद्यालय"],
+      [/will remain closed/g,"बंद रहेगा"],[/will be closed/g,"बंद रहेगा"],[/will open/g,"खुलेगा"],[/holiday/g,"अवकाश"],
+      [/office/g,"कार्यालय"],[/work/g,"कार्य"],[/parents/g,"अभिभावक"],[/parent/g,"अभिभावक"],
+      [/students/g,"विद्यार्थी"],[/student/g,"विद्यार्थी"],[/children/g,"बच्चे"],[/child/g,"बच्चा"],
+      [/meeting/g,"बैठक"],[/mandatory/g,"अनिवार्य"],[/attendance/g,"उपस्थिति"],[/important/g,"महत्वपूर्ण"],
+      [/required/g,"आवश्यक"],[/please/g,"कृपया"],[/due to/g,"के कारण"],[/because/g,"क्योंकि"],
+      [/tomorrow all students must come/g,"कल सभी विद्यार्थियों का विद्यालय आना अनिवार्य है"],
+      [/all students must come/g,"सभी विद्यार्थियों का विद्यालय आना अनिवार्य है"],
+      [/must come/g,"आना अनिवार्य है"],[/come to school/g,"विद्यालय आएँ"],[/come/g,"आएँ"],
+      [/on time/g,"समय पर"],[/in school/g,"विद्यालय में"],[/at school/g,"विद्यालय में"],
+      [/in civil dress/g,"सामान्य पोशाक में"],[/with civil dress/g,"सामान्य पोशाक में"],
+      [/is necessary/g,"आवश्यक है"],[/is compulsory/g,"अनिवार्य है"],[/necessary/g,"आवश्यक"],
+      [/tomorrow/g,"कल"],[/today/g,"आज"],[/is/g,"है"],[/are/g,"हैं"],[/will/g,"होगा"],[/and/g,"और"],
+      [/all/g,"सभी"],[/some/g,"कुछ"],[/due/g,"कारण"],[/reason/g,"कारण"],[/time/g,"समय"]
+    ];
+    for(const [re,v] of phrases) x=x.replace(re,v);
+    const romanWords={
+      "kal":"कल","aaj":"आज","parso":"परसों","sabhi":"सभी","sab":"सभी","bachchon":"बच्चों","bachcho":"बच्चों","bacchon":"बच्चों","baccho":"बच्चों",
+      "students":"विद्यार्थियों","student":"विद्यार्थी","ko":"को","ka":"का","ki":"की","ke":"के","mein":"में","me":"में","se":"से","par":"पर",
+      "aana":"आना","aaye":"आएँ","aayen":"आएँ","zaroori":"जरूरी","jaruri":"जरूरी","hai":"है","hain":"हैं","hoga":"होगा","rahega":"रहेगा",
+      "rahegi":"रहेगी","school":"विद्यालय","band":"बंद","khulega":"खुलेगा","khulega":"खुलेगा","work":"कार्य","office":"कार्यालय",
+      "parents":"अभिभावक","meeting":"बैठक","civil":"सामान्य","dress":"पोशाक","uniform":"वर्दी","time":"समय","today":"आज","tomorrow":"कल",
+      "come":"आना","must":"अनिवार्य","important":"महत्वपूर्ण","reason":"कारण","wajah":"वजह","kuch":"कुछ","sab":"सभी","bhi":"भी"
+    };
+    x=x.replace(/[A-Za-z]+/g,w=>romanWords[w]||w);
+    // Never allow Latin-script words to leak into the Hindi notice.
+    x=x.replace(/[A-Za-z]+(?:[-'][A-Za-z]+)*/g,"");
+    x=x.replace(/\s{2,}/g," ").replace(/\s+([।,])/g,"$1").trim();
+    return x;
+  };
 
+  const toEnglish=s=>{
+    let x=String(s||"");
+    const phrases=[
+      [/अभिभावक-शिक्षक बैठक/g,"parent-teacher meeting"],[/सामान्य पोशाक/g,"civil dress"],[/विद्यालय की वर्दी/g,"school uniform"],
+      [/कार्यालयीय कार्य/g,"official work"],[/आज/g,"today"],[/कल/g,"tomorrow"],[/परसों/g,"day after tomorrow"],
+      [/विद्यालय/g,"school"],[/बंद रहेगा/g,"will remain closed"],[/खुलेगा/g,"will open"],[/अवकाश/g,"holiday"],
+      [/कार्यालय/g,"office"],[/कार्य/g,"work"],[/अभिभावकों/g,"parents"],[/अभिभावक/g,"parents"],[/विद्यार्थियों/g,"students"],[/विद्यार्थी/g,"students"],
+      [/बच्चों/g,"children"],[/बैठक/g,"meeting"],[/अनिवार्य/g,"mandatory"],[/उपस्थिति/g,"attendance"],[/महत्वपूर्ण/g,"important"],
+      [/आवश्यक/g,"necessary"],[/कृपया/g,"please"],[/के कारण/g,"due to"],[/और/g,"and"],[/सभी/g,"all"],[/कुछ/g,"some"],[/समय/g,"time"],[/में/g,"in"],[/को/g,"to"],[/है/g,"is"],[/हैं/g,"are"]
+    ];
+    for(const [re,v] of phrases) x=x.replace(re,v);
+    return x.replace(/\s{2,}/g," ").trim();
+  };
+
+  const roman=/\b(kal|aaj|parso|school|band|khulega|rahega|bachchon?|bachcho?n?|bacchon?|baccho?n?|parents?|students?|meeting|hai|hoga|zaroori|aana|aayen|civil|dress|uniform|office|work|kuch|wajah|sabhi|must|come)\b/i.test(lower);
+  const isHindi=/[\u0900-\u097F]/.test(raw);
   let en=raw,hi=raw;
-  if(isHindi){hi=raw;en=toEnglish(raw)}
+  if(isHindi){hi=toHindi(raw);en=toEnglish(raw)}
   else if(roman){hi=toHindi(raw);en=toEnglish(hi)}
   else{en=raw;hi=toHindi(raw)}
 
