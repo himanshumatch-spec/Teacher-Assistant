@@ -164,6 +164,7 @@ async function genNotice(){
   toast("NLLB translator तैयार हो रहा है...");
   try{
     const out=await nllbNoticeRewrite(t,type);
+    window.lastNllbOutput=out;
     window.onNativeAiNotice("OK","ENGLISH:\n"+out.english+"\nHINDI:\n"+out.hindi);
   }catch(e){
     console.error(e);
@@ -175,7 +176,7 @@ window.onNativeAiNotice=function(status,payload){if(status!=="OK"){toast(payload
   // language versions complete and separate.
   let subjectEn=topic, subjectHi=topic;
   try{
-    const translated=freeNoticeRewrite(topic,"General Notice");
+    const translated=window.lastNllbOutput || freeNoticeRewrite(topic,"General Notice");
     subjectEn=translated.english
       .replace(/^This is to inform all students and parents that\\s*/i,"")
       .replace(/\\. Kindly take note of this information and make the necessary arrangements\\.$/i,"")
