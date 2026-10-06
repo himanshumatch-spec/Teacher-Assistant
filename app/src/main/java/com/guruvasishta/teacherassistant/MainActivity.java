@@ -309,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
         s.setAllowContentAccess(true);
         // Keep the local APK page isolated from arbitrary file/HTTP content.
         s.setAllowFileAccessFromFileURLs(false);
-        s.setAllowUniversalAccessFromFileURLs(false);
+        s.setAllowUniversalAccessFromFileURLs(true);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             s.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         }
