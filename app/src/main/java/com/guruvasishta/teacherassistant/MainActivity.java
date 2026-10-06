@@ -144,14 +144,15 @@ public class MainActivity extends AppCompatActivity {
     public class AndroidWhatsApp {
         @JavascriptInterface
         public void shareText(String text, String title) {
+            final String message = text == null ? "" : text;
+            final String shareTitle = title;
             runOnUiThread(() -> {
                 try {
-                    if (text == null) text = "";
                     Intent send = new Intent(Intent.ACTION_SEND);
                     send.setType("text/plain");
-                    send.putExtra(Intent.EXTRA_TEXT, text);
-                    if (title != null && !title.trim().isEmpty()) {
-                        send.putExtra(Intent.EXTRA_TITLE, title);
+                    send.putExtra(Intent.EXTRA_TEXT, message);
+                    if (shareTitle != null && !shareTitle.trim().isEmpty()) {
+                        send.putExtra(Intent.EXTRA_TITLE, shareTitle);
                     }
 
                     // Prefer WhatsApp Messenger, then WhatsApp Business.
