@@ -222,7 +222,23 @@ async function genNotice(){
   const out=freeNoticeRewrite(t,type);
   window.onNativeAiNotice("OK","ENGLISH:\n"+out.english+"\nHINDI:\n"+out.hindi);
 }
-window.onNativeAiNotice=function(status,payload){if(status!=="OK"){toast(payload||"AI notice failed");return}let text=String(payload||""),m=text.match(/ENGLISH:\s*([\s\S]*?)(?=\n\s*HINDI:|$)/i),h=text.match(/HINDI:\s*([\s\S]*)$/i),en=(m?.[1]||"").trim(),hi=(h?.[1]||"").trim();if(!en||!hi){toast("AI ने अधूरा notice दिया");return}let type=document.getElementById("type").value,d=dateText();state.noticeHistory.unshift({date:d,type,topic:document.getElementById("topic").value.trim(),english:en,hindi:hi});save();document.getElementById("noticeView").innerHTML=logo()+'<h2>'+esc(state.school)+'</h2><div class="rule"></div><b>NOTICE / सूचना</b><div class="muted">Date / दिनांक: '+d+'</div><p><b>'+esc(type)+'</b></p><div class="body"><p><b>Dear Parents/Students,</b></p><p>'+esc(en)+'</p><hr><p class="hindi"><b>प्रिय अभिभावकों एवं विद्यार्थियों</b></p><p class="hindi">'+esc(hi)+'</p></div><p style="text-align:right">Regards / सादर,<br><b>'+esc(state.school)+'</b></p>';document.getElementById("noticeCard").style.display="block";toast("AI notice तैयार है")}
+window.onNativeAiNotice=function(status,payload){if(status!=="OK"){toast(payload||"AI notice failed");return}let text=String(payload||""),m=text.match(/ENGLISH:\s*([\s\S]*?)(?=\n\s*HINDI:|$)/i),h=text.match(/HINDI:\s*([\s\S]*)$/i),en=(m?.[1]||"").trim(),hi=(h?.[1]||"").trim();if(!en||!hi){toast("AI ने अधूरा notice दिया");return}let type=document.getElementById("type").value,d=dateText(),topic=document.getElementById("topic").value.trim();
+  // Build a professional subject from the user's example while keeping both
+  // language versions complete and separate.
+  let subjectEn=topic, subjectHi=topic;
+  try{
+    const translated=freeNoticeRewrite(topic,"General Notice");
+    subjectEn=translated.english
+      .replace(/^This is to inform all students and parents that\\s*/i,"")
+      .replace(/\\. Kindly take note of this information and make the necessary arrangements\\.$/i,"")
+      .trim();
+    subjectHi=translated.hindi
+      .replace(/^सभी विद्यार्थियों एवं अभिभावकों को सूचित किया जाता है कि\\s*/,"")
+      .replace(/\\s*कृपया इस सूचना का ध्यान रखें और आवश्यक व्यवस्था करें।$/,"")
+      .trim();
+  }catch(e){}
+  state.noticeHistory.unshift({date:d,type,topic,subjectEnglish:subjectEn,subjectHindi:subjectHi,english:en,hindi:hi});save();
+  document.getElementById("noticeView").innerHTML=logo()+'<h2>'+esc(state.school)+'</h2><div class="rule"></div><div style="font-size:12px;font-weight:900;letter-spacing:1px;color:#315bea">OFFICIAL SCHOOL NOTICE</div><div class="muted">Date / दिनांक: '+d+'</div><p><b>'+esc(type)+'</b></p><div class="card" style="margin:14px 0;padding:12px;background:#f7f9ff;border:1px solid #dfe6f5"><b>Subject / विषय</b><div style="margin-top:6px"><b>'+esc(subjectEn)+'</b></div><div class="hindi" style="margin-top:5px"><b>'+esc(subjectHi)+'</b></div></div><div class="body"><p><b>Dear Parents/Students,</b></p><p>'+esc(en)+'</p><hr><p class="hindi"><b>प्रिय अभिभावकों एवं विद्यार्थियों,</b></p><p class="hindi">'+esc(hi)+'</p></div><p style="text-align:right">Regards / सादर,<br><b>'+esc(state.school)+'</b><br><span class="muted">Class Teacher</span></p>';document.getElementById("noticeCard").style.display="block";toast("Professional notice तैयार है")}
 function noticeText(){let n=state.noticeHistory[0];return n?"🏫 "+state.school+"\n\nNOTICE\nDate: "+n.date+"\n"+n.type+"\n\nDear Parents/Students,\n"+n.english+"\n\nप्रिय अभिभावकों/विद्यार्थियों,\n"+n.hindi+"\n\nRegards,\n"+state.school:""}
 async function shareNotice(){let t=noticeText();if(window.AndroidWhatsApp&&AndroidWhatsApp.shareText){AndroidWhatsApp.shareText(t,"Teacher Assistant Notice");return}if(navigator.share){try{await navigator.share({title:"School Notice",text:t})}catch(e){}}else copyText(t)}
 function copyNotice(){copyText(noticeText())}
