@@ -16,7 +16,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -36,7 +35,7 @@ import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-    private static final String APP_URL = "https://appassets.androidplatform.net/assets/index.html";
+    private static final String APP_URL = "file:///android_asset/index.html";
     private static final String NOTICE_AI_URL = "https://school-teacher-gfsg.hatchable.site/api/notice-ai";
 
     public class AndroidShare {
@@ -87,39 +86,6 @@ public class MainActivity extends AppCompatActivity {
                             "Could not share notice image",
                             android.widget.Toast.LENGTH_LONG
                     ).show();
-                }
-            });
-        }
-    }
-
-    public class AndroidWhatsApp {
-        @JavascriptInterface
-        public void shareText(String text, String title) {
-            runOnUiThread(() -> {
-                try {
-                    Intent share = new Intent(Intent.ACTION_SEND);
-                    share.setType("text/plain");
-                    share.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
-                    share.setPackage("com.whatsapp");
-                    startActivity(share);
-                    android.widget.Toast.makeText(
-                            MainActivity.this,
-                            "WhatsApp opened — select your class group and tap Send",
-                            android.widget.Toast.LENGTH_LONG
-                    ).show();
-                } catch (Exception e) {
-                    try {
-                        Intent fallback = new Intent(Intent.ACTION_SEND);
-                        fallback.setType("text/plain");
-                        fallback.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
-                        startActivity(Intent.createChooser(fallback, title == null ? "Share" : title));
-                    } catch (Exception ignored) {
-                        android.widget.Toast.makeText(
-                                MainActivity.this,
-                                "WhatsApp is not installed",
-                                android.widget.Toast.LENGTH_LONG
-                        ).show();
-                    }
                 }
             });
         }
@@ -310,7 +276,7 @@ public class MainActivity extends AppCompatActivity {
         s.setAllowContentAccess(true);
         // Keep the local APK page isolated from arbitrary file/HTTP content.
         s.setAllowFileAccessFromFileURLs(false);
-        s.setAllowUniversalAccessFromFileURLs(true);
+        s.setAllowUniversalAccessFromFileURLs(false);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             s.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW);
         }
@@ -321,15 +287,7 @@ public class MainActivity extends AppCompatActivity {
 
         CookieManager.getInstance().setAcceptCookie(true);
 
-        WebViewAssetLoader assetLoader = new WebViewAssetLoader.Builder()
-                .addPathHandler("/assets/", new WebViewAssetLoader.AssetsPathHandler(this))
-                .build();
-
         webView.setWebViewClient(new WebViewClient() {
-            @Override public android.webkit.WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                return assetLoader.shouldInterceptRequest(request.getUrl());
-            }
-
             @Override public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
@@ -340,7 +298,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidShare(), "AndroidShare");
-        webView.addJavascriptInterface(new AndroidWhatsApp(), "AndroidWhatsApp");
         webView.addJavascriptInterface(new AndroidSaveImage(), "AndroidSaveImage");
         webView.addJavascriptInterface(new AndroidAI(), "AndroidAI");
 
