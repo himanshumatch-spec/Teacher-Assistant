@@ -91,6 +91,39 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public class AndroidWhatsApp {
+        @JavascriptInterface
+        public void shareText(String text, String title) {
+            runOnUiThread(() -> {
+                try {
+                    Intent share = new Intent(Intent.ACTION_SEND);
+                    share.setType("text/plain");
+                    share.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
+                    share.setPackage("com.whatsapp");
+                    startActivity(share);
+                    android.widget.Toast.makeText(
+                            MainActivity.this,
+                            "WhatsApp opened — select your class group and tap Send",
+                            android.widget.Toast.LENGTH_LONG
+                    ).show();
+                } catch (Exception e) {
+                    try {
+                        Intent fallback = new Intent(Intent.ACTION_SEND);
+                        fallback.setType("text/plain");
+                        fallback.putExtra(Intent.EXTRA_TEXT, text == null ? "" : text);
+                        startActivity(Intent.createChooser(fallback, title == null ? "Share" : title));
+                    } catch (Exception ignored) {
+                        android.widget.Toast.makeText(
+                                MainActivity.this,
+                                "WhatsApp is not installed",
+                                android.widget.Toast.LENGTH_LONG
+                        ).show();
+                    }
+                }
+            });
+        }
+    }
+
     public class AndroidSaveImage {
         @JavascriptInterface
         public void saveImage(String dataUrl, String fileName) {
@@ -298,6 +331,7 @@ public class MainActivity extends AppCompatActivity {
         });
 
         webView.addJavascriptInterface(new AndroidShare(), "AndroidShare");
+        webView.addJavascriptInterface(new AndroidWhatsApp(), "AndroidWhatsApp");
         webView.addJavascriptInterface(new AndroidSaveImage(), "AndroidSaveImage");
         webView.addJavascriptInterface(new AndroidAI(), "AndroidAI");
 
