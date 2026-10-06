@@ -1,30 +1,69 @@
 # Teacher Assistant — Android APK Project
 
-Native Android wrapper for the Guru Vasishta Vidhyan Teacher Assistant PWA.
+Native Android wrapper for the Guru Vasishta Vidhyan Teacher Assistant app.
 
-## App URL
-https://school-teacher-gfsg.hatchable.site
+## Current stable build
 
-## Build locally
+Build #63 is the verified debug build containing the WhatsApp package-visibility fix.
+
+## Debug build
+
 Requires JDK 17+ and Android SDK plus Gradle 8.13:
 
 ```bash
 gradle assembleDebug
 ```
 
-Debug APK:
+Output:
 `app/build/outputs/apk/debug/app-debug.apk`
 
-Release:
-`./gradlew assembleRelease`
+## Signed release APK
 
-For a distributable release APK, configure Android release signing. The included GitHub Actions workflow builds debug APKs automatically; signed release builds activate when the documented keystore secrets are configured.
+The project now has a dedicated manual GitHub Actions workflow:
 
-## GitHub Actions
-The workflow in `.github/workflows/android.yml` builds a debug APK on every push and on manual dispatch. A signed release build is enabled when these GitHub Actions secrets are provided:
-- KEYSTORE_BASE64
-- KEYSTORE_PASSWORD
-- KEY_ALIAS
-- KEY_PASSWORD
+`.github/workflows/release.yml`
 
-The Android wrapper keeps the existing standalone UI, attendance register, notices, PNG save, and settings intact.
+It creates a properly signed `app-release.apk` using the project's release keystore.
+
+### Required GitHub Actions secrets
+
+Repository → Settings → Secrets and variables → Actions → New repository secret:
+
+- `TA_RELEASE_KEYSTORE_B64`
+- `TA_RELEASE_STORE_PASSWORD`
+- `TA_RELEASE_KEY_ALIAS`
+- `TA_RELEASE_KEY_PASSWORD`
+
+The release workflow is manual so a missing signing secret cannot break normal debug builds.
+
+### Important signing rule
+
+Keep the same release keystore permanently. Future APK updates must use the same signing key or Android will not allow an update over the installed release app.
+
+The release application ID is:
+`com.guruvasishta.teacherassistant`
+
+The debug build uses a separate `.debug` application ID suffix, so debug and release can coexist during testing.
+
+## Release process
+
+1. Add the four GitHub Actions secrets.
+2. Open GitHub → Actions → **Teacher Assistant Signed Release APK**.
+3. Click **Run workflow**.
+4. Wait for the release workflow to finish successfully.
+5. Download the `Teacher-Assistant-release` artifact.
+6. Distribute the resulting `app-release.apk`.
+
+The signed release is suitable for direct distribution to teachers. Android/Play Protect may still perform a security scan for APKs installed outside Google Play.
+
+## App features
+
+- Attendance
+- Student register
+- Attendance history
+- Professional bilingual notice generator
+- Notice history
+- Save notice as PNG
+- WhatsApp sharing
+- School logo/settings
+- Offline/local-first operation
